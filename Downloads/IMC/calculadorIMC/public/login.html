@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Calculadora de IMC</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Bem-vindo de volta</h1>
+        <p>Por favor, entre com sua conta</p>
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" placeholder="Digite seu email" required>
+            </div>
+            <div class="input-group">
+                <label for="password">Senha:</label>
+                <input type="password" id="password" placeholder="Digite sua senha" required minlength="8">
+            </div>
+            <button type="submit" class="button">Entrar</button>
+            <p class="message">Não tem uma conta? <a href="register.html">Cadastre-se</a></p>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('http://localhost:5000/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    // Redireciona o usuário para a página do IMC
+                    window.location.href = 'imc.html';
+                } else {
+                    alert(data.message);  // Exibe a mensagem de erro
+                }
+            } catch (error) {
+                alert('Erro ao tentar fazer login. Tente novamente.');
+            }
+        });
+    </script>
+</body>
+</html>

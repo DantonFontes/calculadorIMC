@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de IMC</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculadora de IMC</h1>
+        <p>Preencha os campos abaixo para calcular o seu IMC</p>
+
+        <!-- Botões para escolha do sexo -->
+        <div class="input-group">
+            <p>Sexo:</p>
+            <div class="gender-buttons">
+                <button id="masculino" class="gender-btn">Masculino</button>
+                <button id="feminino" class="gender-btn">Feminino</button>
+            </div>
+        </div>
+
+        <!-- Campos de peso e altura -->
+        <div class="input-group">
+            <label for="peso">Peso (kg):</label>
+            <input type="number" id="peso" placeholder="Insira seu peso" required min="1">
+        </div>
+        <div class="input-group">
+            <label for="altura">Altura (m):</label>
+            <input type="number" id="altura" placeholder="Insira sua altura" step="0.01" required min="0.5">
+        </div>
+        
+        <button id="calcularIMC" class="button">Calcular</button>
+        <div id="resultado" class="resultado"></div>
+
+        <div id="saveArea" class="save-area" style="display: none;">
+            <input type="text" id="nomeCalculo" placeholder="Nome do cálculo">
+            <button id="salvarCalculo" class="button">Salvar</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('calcularIMC').addEventListener('click', function () {
+            const peso = parseFloat(document.getElementById('peso').value);
+            const altura = parseFloat(document.getElementById('altura').value);
+            let imc = peso / (altura * altura);
+
+            // Exibe o resultado do IMC
+            document.getElementById('resultado').innerText = `Seu IMC é: ${imc.toFixed(2)}`;
+
+            // Exibe a área para salvar o IMC
+            document.getElementById('saveArea').style.display = 'flex';
+        });
+
+        document.getElementById('salvarCalculo').addEventListener('click', async function () {
+            const imc = document.getElementById('resultado').innerText.split(': ')[1];
+            const nomeCalculo = document.getElementById('nomeCalculo').value;
+            const email = 'usuário_logado_email';  // Use o email do usuário logado aqui
+
+            try {
+                const response = await fetch('http://localhost:5000/save-imc', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, imc, classification: nomeCalculo })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert('IMC salvo com sucesso!');
+                } else {
+                    alert(data.message);  // Exibe a mensagem de erro
+                }
+            } catch (error) {
+                alert('Erro ao salvar o IMC. Tente novamente.');
+            }
+        });
+    </script>
+</body>
+</html>
