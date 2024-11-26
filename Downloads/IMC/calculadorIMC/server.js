@@ -1,65 +1,125 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
-const path = require('path');
+const db = require('./database'); // Importa o arquivo database.js
 
 const app = express();
-app.use(cors());
+const PORT = 8080;
+
+// Middleware para processar JSON
 app.use(bodyParser.json());
 
-// Serve arquivos estáticos da pasta 'public'
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Simulação de banco de dados
-const users = [];
-const savedIMCs = [];
-
-// Endpoint de cadastro
+// Endpoint para registrar um novo usuário
 app.post('/register', (req, res) => {
     const { name, email, password } = req.body;
-    const existingUser = users.find(user => user.email === email);
-    if (existingUser) {
-        return res.status(400).json({ message: 'Email já cadastrado!' });
-    }
-    users.push({ name, email, password });
-    res.status(201).json({ message: 'Usuário cadastrado com sucesso!' });
+
+    const query = `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`;
+
+    db.run(query, [name, email, password], function (err) {
+        if (err) {
+            if (err.message.includes('UNIQUE')) {
+                res.status(400).json({ message: 'Email já cadastrado!' });
+            } else {
+                res.status(500).json({ message: 'Erro ao registrar usuário.' });
+            }
+        } else {
+            res.status(201).json({ message: 'Usuário cadastrado com sucesso!' });
+        }
+    });
 });
 
-// Endpoint de login
+// Endpoint para login do usuário
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
-    const user = users.find(user => user.email === email && user.password === password);
-    if (!user) {
-        return res.status(401).json({ message: 'Credenciais inválidas!' });
-    }
-    res.json({ message: 'Login bem-sucedido!', user });
+
+    const query = `SELECT * FROM users WHERE email = ? AND password = ?`;
+
+    db.get(query, [email, password], (err, user) => {
+        if (err) {
+            res.status(500).json({ message: 'Erro ao processar login.' });
+        } else if (!user) {
+            res.status(401).json({ message: 'Credenciais inválidas!' });
+        } else {
+            res.json({ message: 'Login bem-sucedido!', user });
+        }
+    });
 });
 
-// Endpoint para salvar IMC
+// Endpoint para salvar um cálculo de IMC
 app.post('/save-imc', (req, res) => {
     const { email, imc, classification } = req.body;
-    savedIMCs.push({ email, imc, classification });
-    res.status(201).json({ message: 'IMC salvo com sucesso!' });
+
+    const query = `INSERT INTO imcs (email, imc, classification) VALUES (?, ?, ?)`;
+
+    db.run(query, [email, imc, classification], function (err) {
+        if (err) {
+            res.status(500).json({ message: 'Erro ao salvar o IMC.' });
+        } else {
+            res.status(201).json({ message: 'IMC salvo com sucesso!' });
+        }
+    });
 });
 
-// Endpoint para listar IMCs salvos
-app.get('/imcs', (req, res) => {
-    const { email } = req.query;
-    const userIMCs = savedIMCs.filter(imc => imc.email === email);
-    res.json(userIMCs);
+// Endpoint para atualizar um usuário
+app.put('/update-user', (req, res) => {
+    const { email, name, password } = req.body;
+
+    const query = `UPDATE users SET name = ?, password = ? WHERE email = ?`;
+
+    db.run(query, [name, password, email], function (err) {
+        if (err) {
+            res.status(500).json({ message: 'Erro ao atualizar usuário.' });
+        } else {
+            res.json({ message: 'Usuário atualizado com sucesso!' });
+        }
+    });
 });
 
-// Rota principal para carregar o index.html
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Endpoint para deletar um usuário
+app.delete('/delete-user', (req, res) => {
+    const { email } = req.body;
+
+    const query = `DELETE FROM users WHERE email = ?`;
+
+    db.run(query, [email], function (err) {
+        if (err) {
+            res.status(500).json({ message: 'Erro ao deletar usuário.' });
+        } else {
+            res.json({ message: 'Usuário deletado com sucesso!' });
+        }
+    });
 });
 
-// Inicializa o servidor
-const PORT = 8080;
+// Endpoint para atualizar o IMC
+app.put('/update-imc', (req, res) => {
+    const { email, imc, classification } = req.body;
+
+    const query = `UPDATE imcs SET imc = ?, classification = ? WHERE email = ?`;
+
+    db.run(query, [imc, classification, email], function (err) {
+        if (err) {
+            res.status(500).json({ message: 'Erro ao atualizar IMC.' });
+        } else {
+            res.json({ message: 'IMC atualizado com sucesso!' });
+        }
+    });
+});
+
+// Endpoint para deletar um IMC
+app.delete('/delete-imc', (req, res) => {
+    const { email } = req.body;
+
+    const query = `DELETE FROM imcs WHERE email = ?`;
+
+    db.run(query, [email], function (err) {
+        if (err) {
+            res.status(500).json({ message: 'Erro ao deletar IMC.' });
+        } else {
+            res.json({ message: 'IMC deletado com sucesso!' });
+        }
+    });
+});
+
+// Inicia o servidor
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
-});
-app.use((req, res, next) => {
-    console.log(`Requisição recebida: ${req.method} ${req.url}`);
-        next();
 });
