@@ -1,116 +1,128 @@
-let sexoSelecionado = ""; // Variável para armazenar o sexo escolhido
+document.addEventListener("DOMContentLoaded", function () {
+    // Seção de login e cadastro
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    
+    // Seção de cálculo IMC
+    const calcularBtn = document.getElementById('calcularIMC');
+    const resultadoDiv = document.getElementById('resultado');
+    const saveArea = document.getElementById('saveArea');
+    const salvarCalculoBtn = document.getElementById('salvarCalculo');
+    const nomeCalculoInput = document.getElementById('nomeCalculo');
+    
+    // Variáveis para o controle de sexo
+    const masculinoBtn = document.getElementById('masculino');
+    const femininoBtn = document.getElementById('feminino');
+    let sexoSelecionado = "";
+    
+    // Login
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
 
-// Seleção dos botões de sexo
-const masculinoBtn = document.getElementById("masculino");
-const femininoBtn = document.getElementById("feminino");
+            try {
+                const response = await fetch('http://localhost:5000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
 
-// Função para alternar o estado ativo dos botões
-function selecionarSexo(sexo) {
-    sexoSelecionado = sexo;
-    masculinoBtn.classList.toggle("active", sexo === "masculino");
-    femininoBtn.classList.toggle("active", sexo === "feminino");
-}
-
-// Eventos de clique nos botões
-masculinoBtn.addEventListener("click", () => selecionarSexo("masculino"));
-femininoBtn.addEventListener("click", () => selecionarSexo("feminino"));
-
-// Calculadora de IMC
-document.getElementById("calcularIMC").addEventListener("click", async () => {
-    const peso = parseFloat(document.getElementById("peso").value);
-    const altura = parseFloat(document.getElementById("altura").value);
-    const resultadoDiv = document.getElementById("resultado");
-
-    // Validações
-    if (!sexoSelecionado || isNaN(peso) || peso <= 0 || isNaN(altura) || altura <= 0) {
-        resultadoDiv.innerHTML = `<p style="color: red;">Por favor, preencha todos os campos corretamente.</p>`;
-        return;
+                const data = await response.json();
+                if (response.ok) {
+                    // Guarda o email no localStorage para controle do login
+                    localStorage.setItem('email', email);
+                    window.location.href = 'imc.html';  // Redireciona para página de IMC
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Erro ao fazer login. Tente novamente.');
+            }
+        });
     }
 
-    // Cálculo do IMC
-    const imc = peso / (altura * altura);
-    let classificacao = "";
+    // Cadastro
+    if (registerForm) {
+        registerForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
 
-    // Definir classificação com base no IMC
-    if (imc < 18.5) {
-        classificacao = "Abaixo do peso";
-    } else if (imc >= 18.5 && imc < 24.9) {
-        classificacao = "Peso normal";
-    } else if (imc >= 25 && imc < 29.9) {
-        classificacao = "Sobrepeso";
-    } else {
-        classificacao = "Obesidade";
+            try {
+                const response = await fetch('http://localhost:5000/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    window.location.href = 'login.html';  // Redireciona para página de login
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Erro ao tentar cadastrar. Tente novamente.');
+            }
+        });
     }
 
-    // Exibir resultado
-    resultadoDiv.innerHTML = `
-        <p>IMC: <strong>${imc.toFixed(2)}</strong></p>
-        <p>Classificação: <strong>${classificacao}</strong></p>
-        <p>Sexo: <strong>${sexoSelecionado.charAt(0).toUpperCase() + sexoSelecionado.slice(1)}</strong></p>
-    `;
+    // Função para calcular o IMC
+    calcularBtn.addEventListener("click", function () {
+        const peso = parseFloat(document.getElementById('peso').value);
+        const altura = parseFloat(document.getElementById('altura').value);
 
-    // Salvar IMC no backend (se autenticado)
-    const saveArea = document.getElementById("saveArea");
-    const email = sessionStorage.getItem("email"); // Armazene o email ao fazer login
+        if (peso > 0 && altura > 0) {
+            let imc = peso / (altura * altura);
+            resultadoDiv.innerText = `Seu IMC é: ${imc.toFixed(2)}`;
+            saveArea.style.display = 'flex';  // Exibe a área para salvar o cálculo
+        } else {
+            alert("Por favor, preencha os valores de peso e altura corretamente.");
+        }
+    });
 
-    if (email) {
-        saveArea.style.display = "block"; // Exibe a área de salvar IMC se o usuário estiver logado
+    // Função para salvar o IMC no banco de dados
+    salvarCalculoBtn.addEventListener("click", async function () {
+        const imc = resultadoDiv.innerText.split(': ')[1];
+        const nomeCalculo = nomeCalculoInput.value;
+        const email = localStorage.getItem('email');
+
+        if (!email) {
+            alert("Você precisa estar logado para salvar o cálculo.");
+            return;
+        }
 
         try {
-            const response = await fetch("http://localhost:8080/save-imc", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email,
-                    imc,
-                    classification: classificacao
-                }),
+            const response = await fetch('http://localhost:5000/save-imc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, imc, classification: nomeCalculo })
             });
 
+            const data = await response.json();
             if (response.ok) {
-                alert("IMC salvo com sucesso!");
+                alert('IMC salvo com sucesso!');
             } else {
-                const error = await response.json();
-                alert(error.message);
+                alert(data.message);
             }
         } catch (error) {
-            console.error("Erro ao salvar IMC:", error);
-            alert("Erro ao se conectar com o servidor.");
+            alert('Erro ao salvar o IMC. Tente novamente.');
         }
-    } else {
-        alert("Você precisa estar logado para salvar o IMC.");
-    }
-});
+    });
 
-// Função de login
-document.getElementById("formLogin").addEventListener("submit", async function (event) {
-    event.preventDefault(); // Previne o envio tradicional do formulário
+    // Funções para a seleção de sexo
+    masculinoBtn.addEventListener("click", function () {
+        sexoSelecionado = "masculino";
+        masculinoBtn.classList.add("active");
+        femininoBtn.classList.remove("active");
+    });
 
-    const email = document.getElementById("emailLogin").value;
-    const senha = document.getElementById("senhaLogin").value;
-
-    try {
-        const response = await fetch("http://localhost:8080/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ email, password: senha })
-        });
-
-        const data = await response.json();
-
-        if (data.message === "Login bem-sucedido!") {
-            alert("Login realizado com sucesso!");
-            sessionStorage.setItem("email", email); // Armazena o email no sessionStorage
-            window.location.href = "/"; // Redireciona para a página inicial
-        } else {
-            alert(data.message); // Exibe mensagem de erro caso as credenciais sejam inválidas
-        }
-    } catch (error) {
-        console.error("Erro no login:", error);
-        alert("Erro ao tentar fazer login.");
-    }
+    femininoBtn.addEventListener("click", function () {
+        sexoSelecionado = "feminino";
+        femininoBtn.classList.add("active");
+        masculinoBtn.classList.remove("active");
+    });
 });

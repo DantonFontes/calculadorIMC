@@ -8,10 +8,19 @@ const db = new sqlite3.Database(dbPath, (err) => {
         console.error('Erro ao conectar ao banco de dados:', err.message);
     } else {
         console.log('Conectado ao banco de dados SQLite.');
+        
+        // Ativar o suporte a chaves estrangeiras
+        db.run('PRAGMA foreign_keys = ON;', (err) => {
+            if (err) {
+                console.error('Erro ao ativar chaves estrangeiras:', err.message);
+            } else {
+                console.log('Chaves estrangeiras ativadas.');
+            }
+        });
     }
 });
 
-// Cria tabelas, se não existirem
+// Criação das tabelas com tratamento de erro
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS users (
@@ -20,17 +29,29 @@ db.serialize(() => {
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
         )
-    `);
+    `, (err) => {
+        if (err) {
+            console.error('Erro ao criar a tabela users:', err.message);
+        } else {
+            console.log('Tabela users criada ou já existente.');
+        }
+    });
 
     db.run(`
         CREATE TABLE IF NOT EXISTS imcs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
             imc REAL NOT NULL,
             classification TEXT NOT NULL,
-            FOREIGN KEY (email) REFERENCES users (email)
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
-    `);
+    `, (err) => {
+        if (err) {
+            console.error('Erro ao criar a tabela imcs:', err.message);
+        } else {
+            console.log('Tabela imcs criada ou já existente.');
+        }
+    });
 });
 
 module.exports = db;
